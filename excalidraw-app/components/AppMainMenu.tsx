@@ -2,13 +2,17 @@ import {
   loginIcon,
   ExcalLogo,
   eyeIcon,
+  plusIcon,
 } from "@excalidraw/excalidraw/components/icons";
 import { MainMenu } from "@excalidraw/excalidraw/index";
 import React from "react";
+import { CaptureUpdateAction } from "@excalidraw/excalidraw";
+import { serializeAsJSON } from "@excalidraw/excalidraw/data/json";
 
 import { isDevEnv } from "@excalidraw/common";
 
 import type { Theme } from "@excalidraw/element/types";
+import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
 import { LanguageList } from "../app-language/LanguageList";
 import { isExcalidrawPlusSignedUser } from "../app_constants";
@@ -22,11 +26,66 @@ export const AppMainMenu: React.FC<{
   theme: Theme | "system";
   setTheme: (theme: Theme | "system") => void;
   refresh: () => void;
+  excalidrawAPI?: ExcalidrawImperativeAPI | null;
 }> = React.memo((props) => {
+  const handleNewSheet = () => {
+    if (!props.excalidrawAPI) return;
+
+    try {
+      const elements = props.excalidrawAPI.getSceneElements();
+      const appState = props.excalidrawAPI.getAppState();
+      const files = props.excalidrawAPI.getFiles();
+
+      //save current sheet if it has content
+      if (elements.length > 0) {
+        const data = serializeAsJSON(elements, appState, files, "local");
+        const timestamp = new Date()
+          .toISOString()
+          .slice(0, 19)
+          .replace(/[T:]/g, "-");
+        const filename = `sheet-${timestamp}.excalidraw`;
+
+        const blob = new Blob([data], { type: "application/json" }); //an excalidraw file is just a json file with a .excalidraw extension
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        props.excalidrawAPI.setToast({
+          message: `Saved as ${filename}`,
+        });
+      }
+
+      //make the canvas ready for a new sheet
+      props.excalidrawAPI.updateScene({
+        elements: [],
+        appState: {
+          ...appState,
+          selectedElementIds: {},
+          resizingElement: null,
+          selectionElement: null,
+        },
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+    } catch (error) {
+      console.error("Error creating new sheet:", error);
+      props.excalidrawAPI?.setToast({
+        message: "Error creating new sheet",
+      });
+    }
+  };
+
   return (
     <MainMenu>
       <MainMenu.DefaultItems.LoadScene />
       <MainMenu.DefaultItems.SaveToActiveFile />
+      <MainMenu.Item icon={plusIcon} onClick={handleNewSheet}>
+        New Sheet
+      </MainMenu.Item>
       <MainMenu.DefaultItems.Export />
       <MainMenu.DefaultItems.SaveAsImage />
       {props.isCollabEnabled && (

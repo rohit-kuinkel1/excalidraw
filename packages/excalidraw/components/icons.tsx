@@ -2254,3 +2254,17 @@ export const elementLinkIcon = createIcon(
   </g>,
   tablerIconProps,
 );
+
+export const plusIcon = (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 20 20"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
+    <line x1="10" y1="5" x2="10" y2="15" />
+    <line x1="5" y1="10" x2="15" y2="10" />
+  </svg>
+);
